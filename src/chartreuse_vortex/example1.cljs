@@ -25,6 +25,7 @@
                                     :sprites []})))
 
 (defn updatesprite [{:keys [x y dx dy key] :as spritedata} dt width height]
+  ;; typical forward euler method:
   ;; p_x' = p_x + v_x * dt
   ;; p_y' = p_y + v_y * dt
   ;; v_x' = v_x
