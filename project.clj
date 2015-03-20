@@ -28,6 +28,7 @@
                               :http-server-root "public"
                               :server-port 8081
                               :ring-handler chartreuse-vortex.server.core/handler
+                              :nrepl-port 7888
                               }
                    :plugins [[lein-figwheel "0.2.5-SNAPSHOT"]]}}
   

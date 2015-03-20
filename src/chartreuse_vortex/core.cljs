@@ -5,18 +5,19 @@
             [omreactpixi.abbrev :as pixi]
             [schema.core :as schema]
             [clojure.string :as string]
-            [chartreuse-vortex.example1 :as example1]))
+            [chartreuse-vortex.example1 :as example1]
+            [chartreuse-vortex.example2 :as example2]))
 
 
 (enable-console-print!)
 
-(defn startchartreuse []
+(defn startchartreuse [{:keys [examplecomponent exampleappstate]}]
   (let [inset #(- % 16)
         w (-> js/window .-innerWidth inset)
         h (-> js/window .-innerHeight inset)]
-    (swap! example1/appstate #(-> % (assoc :width w) (assoc :height h)))
-    (om/root example1/examplestage example1/appstate
+    (swap! exampleappstate #(-> % (assoc :width w) (assoc :height h)))
+    (om/root examplecomponent exampleappstate
              {:target (.getElementById js/document "my-app")})))
 
 
-(startchartreuse)
+(startchartreuse (example1/getcomponentandstate))

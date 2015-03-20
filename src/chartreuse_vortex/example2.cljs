@@ -1,11 +1,13 @@
 ;;
-;; example 1 - the worst possible way
-;; Just update the data structures like you would update mutable state.
-;; This method is slow but also does not take advantage of the efficiency
-;; afforded by structural sharing of immutable data structures.
+;; example 2 - just as bad as example 1
+;; We process the sprite update with a transient vector instead of persistent
+;; because it's "faster"
+;; This doesn't turn out to be any faster since many clojure functions already
+;; use transients internally.
 ;;
-(ns chartreuse-vortex.example1
+(ns chartreuse-vortex.example2
   (:require [chartreuse-vortex.common :as common]
+            [chartreuse-vortex.example1 :as example1]
             [goog.events :as events]
             [om.core :as om :include-macros true]
             [om-tools.core :as omtools :refer-macros [defcomponentk] :include-macros true]
@@ -47,7 +49,11 @@
 
 (defn updateallsprites [{:keys [width height sprites dt] :as appstate}]
   (let [[correctedwidth correctedheight] (common/shrinkbyspritesize appstate)
-        newspritedata (map #(updatesprite % dt correctedwidth correctedheight) sprites)]
+        updater (fn [sprite] (updatesprite sprite dt correctedwidth correctedheight))
+        newspritedata (loop [olddata sprites newdata (transient [])]
+                        (if (seq olddata)
+                          (recur (rest olddata) (conj! newdata (updater (first olddata))))
+                          (persistent! newdata)))]
     (assoc appstate :sprites newspritedata)))
 
 
