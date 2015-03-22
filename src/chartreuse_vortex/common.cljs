@@ -16,6 +16,17 @@
 (def *spritesize* 128)
 (def *gravity* 500)
 
+;; from the Clojure Cookbook
+(defn- scale [x y]
+  (if (or (zero? x) (zero? y))
+    1
+    (js/Math.abs x)))
+
+(defn float=
+  ([x y] (float= x y 0.00001))
+  ([x y epsilon] (<= (js/Math.abs (- x y))
+                     (* (scale x y) epsilon))))
+
 
 (defn shrinkbyspritesize [{:keys [width height]}]
   [(- width *spritesize*) (- height *spritesize*)])
