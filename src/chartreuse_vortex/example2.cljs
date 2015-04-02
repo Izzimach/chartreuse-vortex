@@ -15,8 +15,9 @@
             [schema.core :as schema]
             [clojure.string :as string]))
 
-(defn addsprite [{:keys [sprites] :as appdata}]
-  (let [[newx newy] (map rand-int (common/shrinkbyspritesize appdata))
+(defn addsprite [appdata]
+  (let [sprites (:sprites appdata)
+        [newx newy] (map rand-int (common/shrinkbyspritesize appdata))
         newsprite {:x newx :y newy :dx 300 :dy 0 :key (count sprites) :image common/*spriteimage*}
         newsprites (conj sprites newsprite)]
     (assoc appdata :sprites newsprites)))
@@ -50,7 +51,8 @@
 (defn updateallsprites [{:keys [width height sprites dt] :as appstate}]
   (let [[correctedwidth correctedheight] (common/shrinkbyspritesize appstate)
         updater (fn [sprite] (updatesprite sprite dt correctedwidth correctedheight))
-        newspritedata (loop [olddata sprites newdata (transient [])]
+        newspritedata (loop [olddata sprites
+                             newdata (transient [])]
                         (if (seq olddata)
                           (recur (rest olddata) (conj! newdata (updater (first olddata))))
                           (persistent! newdata)))]

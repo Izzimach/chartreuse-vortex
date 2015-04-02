@@ -7,6 +7,7 @@
             [clojure.string :as string]
             [chartreuse-vortex.example1 :as example1]
             [chartreuse-vortex.example2 :as example2]
+            [chartreuse-vortex.example3 :as example3]
             [chartreuse-vortex.tests.core :as tests]))
 
 
@@ -20,7 +21,4 @@
     (om/root examplecomponent exampleappstate
              {:target (.getElementById js/document "my-app")})))
 
-
-
-
-(startchartreuse (example1/getcomponentandstate))
+(startchartreuse (example3/getcomponentandstate))
