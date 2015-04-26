@@ -42,6 +42,10 @@
                          :sprites []}))
 
 (defn linear-hits [x dx targetx maxtime]
+  {:pre [(number? x)
+         (number? dx)
+         (number? targetx)
+         (number? maxtime)]}
   (if (common/float= 0 dx)
     maxtime
     (let [distance (- targetx x)
@@ -51,6 +55,8 @@
         (min time maxtime)))))
 
 (defn ballistic-fall [x y dx dy g elapsedtime]
+  {:pre [(number? x)
+         (number? y)]}
   "Given a start position, velocity, gravity, and time computes
 the new position and velocity after a given time"
   (let [newx (+ x (* dx elapsedtime))
