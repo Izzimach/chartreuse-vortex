@@ -12,6 +12,7 @@
 
 (defroutes handler
   (resources "/react-pixi" {:root "react_pixi"})
+  (files "/out" {:root "target/out"})
   (files "/" {:root "resources/public"}))
 
 

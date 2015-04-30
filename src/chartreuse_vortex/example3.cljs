@@ -17,21 +17,30 @@
             [goog.events :as events]
             [om.core :as om :include-macros true]
             [om-tools.core :as omtools :refer-macros [defcomponentk] :include-macros true]
+            ;; we use element-args for our own macro here
             [omreactpixi.abbrev :as pixi]
             [schema.core :as schema]
             [clojure.string :as string]
-            [cljs.core.async :as async :refer [>! <! put!]]))
+            [cljs.core.async :as async :refer [>! <! put!]]
+            ;; this directly imports js code from the :libs path...
+            [chartreuse-vortex.jscomponent :as jscomponent :include-macros true]))
 
 (defonce *maxtimestep* 10)
+
+;;
+;; need to code up clojurescript shims for our custom components
+;;
 
 (defn addsprite [{:keys [sprites] :as appdata} currenttime]
   {:pre [(number? currenttime)]}
   (let [[newx newy] (map rand-int (common/shrinkbyspritesize appdata))
-        newsprite {:x newx
-                   :y newy
-                   :dx 300
-                   :dy 0
-                   :attime currenttime
+        newsprite {:x0 newx
+                   :y0 newy
+                   :dx0 300
+                   :dy0 0
+                   :ddx0 0
+                   :ddy0 common/*gravity*
+                   :t0 currenttime
                    :key (count sprites)
                    :image common/*spriteimage*}
         newsprites (conj sprites newsprite)]
@@ -54,30 +63,31 @@
         maxtime
         (min time maxtime)))))
 
-(defn ballistic-fall [x y dx dy g elapsedtime]
+(defn constant-accelerate [x y dx dy ddx ddy elapsedtime]
   {:pre [(number? x)
          (number? y)]}
-  "Given a start position, velocity, gravity, and time computes
+  "Given a Start position, velocity, gravity, and time computes
 the new position and velocity after a given time"
-  (let [newx (+ x (* dx elapsedtime))
-        newy (+ y (* dy elapsedtime) (* 0.5 g elapsedtime elapsedtime))
-        newdx dx
-        newdy (+ dy (* g elapsedtime))]
+  (let [newx (+ x (* dx elapsedtime) (* 0.5 ddx elapsedtime elapsedtime))
+        newy (+ y (* dy elapsedtime) (* 0.5 ddy elapsedtime elapsedtime))
+        newdx (+ dx (* ddx elapsedtime))
+        newdy (+ dy (* ddy elapsedtime))]
     [newx newy newdx newdy]))
 
-(defn advance-sprite [{:keys [x y dx dy attime] :as spritedata} advancetime]
+(defn advance-sprite [{:keys [x0 y0 dx0 dy0 ddx0 ddy0 t0] :as spritedata} advancetime]
   {:pre [(number? advancetime)
-         (number? attime)]}
+         (number? t0)]}
   "Produce a new spritedata structure by taking the current sprite data
 and advancing it in time by a specified amount."
-  (let [newtime (+ attime advancetime)
-        [newx newy newdx newdy] (ballistic-fall x y dx dy common/*gravity* advancetime)]
+  (let [newtime (+ t0 advancetime)
+        [newx newy newdx newdy] (constant-accelerate x0 y0 dx0 dy0 ddx0 ddy0 advancetime)]
     (assoc spritedata
-           :x newx
-           :y newy
-           :dx newdx
-           :dy newdy
-           :attime newtime)))
+           :x0 newx
+           :y0 newy
+           :dx0 newdx
+           :dy0 newdy
+	   ;; don't modify accelerations here
+           :t0 newtime)))
 
 (defn parabola-hits [y dy g targetheight maxtime]
   "Given a parabola described by y(t) = y(0) + dy*t + (1/2)g(t*t) this
@@ -103,23 +113,23 @@ maxtime if the parabola will never intersect the target height with non-negative
                   maxtime)))
           maxtime))))
 
-(defn next-collision-time [{:keys [x y dx dy attime] :as spritedata} width height]
+(defn next-collision-time [{:keys [x0 y0 dx0 dy0 t0] :as spritedata} width height]
   "Given a sprite figures out at what time the sprite will collide off 
 the sides of the display area. Returns a vector [a b] where a is the
 collision time and b is a keyword describing the collision type, one of
 {:left :right :up :down :none}"
   (let [maxtime *maxtimestep*
-        lefthittime (if (>= dx 0)
+        lefthittime (if (>= dx0 0)
                       maxtime
-                      (/ x (js/Math.abs dx)))
-        righthittime (if (<= dx 0)
+                      (/ x0 (js/Math.abs dx0)))
+        righthittime (if (<= dx0 0)
                        maxtime
-                       (/ (- width common/*spritesize* x) dx))
-        uphittime (if (<= 0 dy)
-                    (parabola-hits y dy *gravity* 0 maxtime)
+                       (/ (- width common/*spritesize* x0) dx0))
+        uphittime (if (<= 0 dy0)
+                    (parabola-hits y0 dy0 *gravity* 0 maxtime)
                     maxtime)
-        downhittime (parabola-hits y dy *gravity* (- height common/*spritesize*) maxtime)
-        nohittime (- maxtime 0.1)
+        downhittime (parabola-hits y0 dy0 *gravity* (- height common/*spritesize*) maxtime)
+        nohittime (- maxtime 0.001)
         ;; consolidate times
         horzhittime (if (< lefthittime righthittime)
                       [lefthittime :left]
@@ -140,13 +150,13 @@ collision time and b is a keyword describing the collision type, one of
 data blob that represents the sprite after its next event (collision) occurs."
   (let [[collidetime collidetype] (next-collision-time spritedata width height)
         spritebeforebounce (advance-sprite spritedata collidetime)
-        absdx (js/Math.abs (:dx spritebeforebounce))
-        absdy (js/Math.abs (:dy spritebeforebounce))]
+        absdx (js/Math.abs (:dx0 spritebeforebounce))
+        absdy (js/Math.abs (:dy0 spritebeforebounce))]
     (case collidetype
-      :left (assoc spritebeforebounce :dx absdx :x 00.01)
-      :right (assoc spritebeforebounce :dx (- absdx) :x (- width *spritesize* 0.01))
-      :up (assoc spritebeforebounce :dy (* 0.9 absdy) :y 0.01)
-      :down (assoc spritebeforebounce :dy (- (* 1 absdy)) :y (- height *spritesize* 0.01))
+      :left (assoc spritebeforebounce :dx0 absdx :x0 00.01)
+      :right (assoc spritebeforebounce :dx0 (- absdx) :x0 (- width *spritesize* 0.01))
+      :up (assoc spritebeforebounce :dy0 (* 0.9 absdy) :y0 0.01)
+      :down (assoc spritebeforebounce :dy0 (- (* 1 absdy)) :y0 (- height *spritesize* 0.01))
       :none spritebeforebounce)))
 
 (defn attach-next-event [spritedata width height]
@@ -163,7 +173,7 @@ time 'nexttime'."
   ;; if the sprite data doesn't contain the next sprite state, add it
   (let [fullspritedata (attach-next-event spritedata width height)
         nextstate (:nextstate fullspritedata)
-        nextstatetime (:attime nextstate)]
+        nextstatetime (:t0 nextstate)]
     (if (> nextstatetime nexttime)
       fullspritedata
       nextstate)))
@@ -201,12 +211,12 @@ time 'nexttime'."
                   (js/cancelAnimationFrame updatefn)))
   (render [_]
           (apply
-           pixi/stage
-           {:width width :height height :key "stage"}
+           jscomponent/rapidstage
+           {:width width :height height :key "stage" :currentTime (om/get-state owner :faketime)}
            (pixi/tilingsprite {:image (common/assetpath-for "bg_castle.png") :width width :height height :key "ack"})
            (om/build addspritebutton {:addspritechannel (om/get-state owner :addspritechannel)})
            (om/build common/spritecountlabel (count sprites))
-           (map pixi/sprite sprites)))
+           (map jscomponent/interpolatingsprite sprites)))
   (display-name [_] "ExampleStage3"))
 
 (defn getcomponentandstate []

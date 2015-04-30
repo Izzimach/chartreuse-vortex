@@ -7,7 +7,7 @@
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [org.clojure/clojurescript "0.0-2850"]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
-                 [org.clojars.haussman/om-react-pixi "0.4.0"]
+                 [org.clojars.haussman/om-react-pixi "0.5.0"]
                  [prismatic/schema "0.3.7"]
                  [prismatic/om-tools "0.3.10"]
                  [ring "1.3.2"]
@@ -22,7 +22,9 @@
             [lein-environ "1.0.0"]
             [com.cemerick/clojurescript.test "0.3.3"]]
 
-
+  ;; dammit leiningen, clean up my stuff
+  :clean-targets ^{:protect false} ["resources/public/out"]
+  
   :profiles {
              :dev {
                    :figwheel {
@@ -34,22 +36,25 @@
                    :plugins [[lein-figwheel "0.2.5-SNAPSHOT"]]}}
   
   :ring { :handler chartreuse-vortex.server.core/handler :port 8081 }
-  
+
   :cljsbuild {
               :builds [{:id "dev"
                         :source-paths ["src" "dev_src"]
                         :compiler {
                                    :output-to "resources/public/chartreuse-vortex.js"
+                                   ;; custom server handler also serves from 'target'
                                    :output-dir "resources/public/out"
                                    :asset-path "out"
+                                   :libs ["resources/public/js"]
                                    :main chartreuse-vortex.dev
                                    :optimizations :none
                                    :source-map true}}
                        {:id "min"
                         :source-paths ["src"]
                         :compiler {
-                                   :output-to "chartreuse-vortex.js"
+                                   :output-to "resources/public/chartreuse-vortex.min.js"
                                    :main chartreuse-vortex.core
+                                   :libs ["resources/public/js"]
                                    :optimizations :advanced
                                    :closure-warnings {:externs-validation :off
                                                       :non-standard-jsdoc :off}}}]})
