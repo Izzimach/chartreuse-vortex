@@ -4,16 +4,16 @@
   :license {:name "MIT"
             :url "http://opensource.org/licenses/MIT"}
 
-  :dependencies [[org.clojure/clojure "1.6.0"]
-                 [org.clojure/clojurescript "0.0-2850"]
+  :dependencies [[org.clojure/clojure "1.7.0-beta2"]
+                 [org.clojure/clojurescript "0.0-3211"]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                  [org.clojars.haussman/om-react-pixi "0.5.0"]
-                 [prismatic/schema "0.3.7"]
-                 [prismatic/om-tools "0.3.10"]
+                 [prismatic/schema "0.4.2"]
+                 [prismatic/om-tools "0.3.11"]
                  [ring "1.3.2"]
-                 [compojure "1.3.1"]
+                 [compojure "1.3.3"]
                  [environ "1.0.0"]
-                 [figwheel "0.2.5-SNAPSHOT"]]
+                 [figwheel "0.3.1"]]
 
   :source-paths ["src"]
 
@@ -33,7 +33,7 @@
                               :ring-handler chartreuse-vortex.server.core/handler
                               :nrepl-port 7888
                               }
-                   :plugins [[lein-figwheel "0.2.5-SNAPSHOT"]]}}
+                   :plugins [[lein-figwheel "0.3.1"]]}}
   
   :ring { :handler chartreuse-vortex.server.core/handler :port 8081 }
 
