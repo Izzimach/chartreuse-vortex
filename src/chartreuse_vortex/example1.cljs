@@ -11,7 +11,8 @@
             [om-tools.core :as omtools :refer-macros [defcomponentk] :include-macros true]
             [omreactpixi.abbrev :as pixi]
             [schema.core :as schema]
-            [clojure.string :as string]))
+            [clojure.string :as string]
+            [chartreuse-vortex.common :as common :include-macros true]))
 
 (defn addsprite [{:keys [sprites] :as appdata}]
   (let [[newx newy] (map rand-int (common/shrinkbyspritesize appdata))
@@ -69,13 +70,16 @@
                 (when-let [updatefn (om/get-state owner :updatecalback)]
                   (js/cancelAnimationFrame updatefn)))
   (render [_]
-          (apply
-           pixi/stage
-           {:width width :height height :key "stage"}
-           (pixi/tilingsprite {:image (common/assetpath-for "bg_castle.png") :width width :height height :key "ack"})
-           (om/build addspritebutton cursor)
-           (om/build common/spritecountlabel (count sprites))
-           (map pixi/sprite sprites)))
+    (common/time-sexp :rendertime
+      (apply
+        pixi/stage
+        {:width width :height height :key "stage"}
+        (pixi/tilingsprite {:image (common/assetpath-for "bg_castle.png") :width width :height height :key "ack"})
+        (om/build addspritebutton cursor)
+        (om/build common/spritecountlabel (count sprites))
+        (om/build common/timinglabels {})
+        (map pixi/sprite sprites))))
+
   (display-name [_] "SimpleStage"))
 
 (defn getcomponentandstate []
