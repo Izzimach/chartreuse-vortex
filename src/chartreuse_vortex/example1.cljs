@@ -5,7 +5,7 @@
 ;; afforded by structural sharing of immutable data structures.
 ;;
 (ns chartreuse-vortex.example1
-  (:require [chartreuse-vortex.common :as common]
+  (:require [chartreuse-vortex.common :as common :include-macros true]
             [goog.events :as events]
             [om.core :as om :include-macros true]
             [om-tools.core :as omtools :refer-macros [defcomponentk] :include-macros true]
@@ -63,7 +63,8 @@
   ;; that updates sprites every frame
   (did-mount [_]
              (let [updatefn (fn updatecallback [_]
-                              (om/transact! cursor updateallsprites)
+                              (common/time-sexp :updatetime
+                                (om/transact! cursor updateallsprites))
                               (om/set-state! owner :updatecallback (js/requestAnimationFrame updatecallback)))]
                (om/set-state! owner :updatecallback (js/requestAnimationFrame updatefn))))
   (will-unmount [_]
@@ -76,8 +77,6 @@
         {:width width :height height :key "stage"}
         (pixi/tilingsprite {:image (common/assetpath-for "bg_castle.png") :width width :height height :key "ack"})
         (om/build addspritebutton cursor)
-        (om/build common/spritecountlabel (count sprites))
-        (om/build common/timinglabels {})
         (map pixi/sprite sprites))))
 
   (display-name [_] "SimpleStage"))

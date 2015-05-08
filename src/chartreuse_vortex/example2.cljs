@@ -6,7 +6,7 @@
 ;; use transients internally.
 ;;
 (ns chartreuse-vortex.example2
-  (:require [chartreuse-vortex.common :as common]
+  (:require [chartreuse-vortex.common :as common :include-macros true]
             [chartreuse-vortex.example1 :as example1]
             [goog.events :as events]
             [om.core :as om :include-macros true]
@@ -70,20 +70,21 @@
   ;; that updates sprites every frame
   (did-mount [_]
              (let [updatefn (fn updatecallback [_]
-                              (om/transact! cursor updateallsprites)
+                              (common/time-sexp :updatetime (om/transact! cursor updateallsprites))
                               (om/set-state! owner :updatecallback (js/requestAnimationFrame updatecallback)))]
                (om/set-state! owner :updatecallback (js/requestAnimationFrame updatefn))))
   (will-unmount [_]
                 (when-let [updatefn (om/get-state owner :updatecalback)]
                   (js/cancelAnimationFrame updatefn)))
   (render [_]
-          (apply
-           pixi/stage
-           {:width width :height height :key "stage"}
-           (pixi/tilingsprite {:image (common/assetpath-for "bg_castle.png") :width width :height height :key "ack"})
-           (om/build addspritebutton cursor)
-           (om/build common/spritecountlabel (count sprites))
-           (map pixi/sprite sprites)))
+    (common/time-sexp :rendertime (apply
+                        pixi/stage
+                        {:width width :height height :key "stage"}
+                        (pixi/tilingsprite {:image (common/assetpath-for "bg_castle.png") :width width :height height :key "ack"})
+                        (om/build addspritebutton cursor)
+                        (om/build common/timinglabels {})
+                        (om/build common/spritecountlabel {:x (- width 200) :y 20 :count (count sprites)})
+                        (map pixi/sprite sprites))))
   (display-name [_] "SimpleStage"))
 
 (defn getcomponentandstate []

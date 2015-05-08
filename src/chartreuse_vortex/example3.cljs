@@ -13,7 +13,7 @@
 
 (ns chartreuse-vortex.example3
   (:require-macros [cljs.core.async.macros :refer [go]])
-  (:require [chartreuse-vortex.common :as common :refer [*gravity* *spritesize*]]
+  (:require [chartreuse-vortex.common :as common :refer [*gravity* *spritesize*] :include-macros true]
             [goog.events :as events]
             [om.core :as om :include-macros true]
             [om-tools.core :as omtools :refer-macros [defcomponentk] :include-macros true]
@@ -196,7 +196,7 @@ time 'nexttime'."
              (let [updatefn (fn updatecallback [newtime]
                               (let [faketime (om/get-state owner :faketime)
                                     newfaketime (+ faketime 0.016)]
-                                (om/transact! cursor (fn [x] (updateallsprites x newfaketime)))
+                                (common/time-sexp :updatetime (om/transact! cursor (fn [x] (updateallsprites x newfaketime))))
                                 (om/set-state! owner :updatecallback (js/requestAnimationFrame updatecallback))
                                 (om/set-state! owner :faketime newfaketime)))
                    addspritechannel (om/get-state owner :addspritechannel)]
@@ -210,13 +210,13 @@ time 'nexttime'."
                 (when-let [updatefn (om/get-state owner :updatecalback)]
                   (js/cancelAnimationFrame updatefn)))
   (render [_]
-          (apply
-           jscomponent/rapidstage
-           {:width width :height height :key "stage" :currentTime (om/get-state owner :faketime)}
-           (pixi/tilingsprite {:image (common/assetpath-for "bg_castle.png") :width width :height height :key "ack"})
-           (om/build addspritebutton {:addspritechannel (om/get-state owner :addspritechannel)})
-           (om/build common/spritecountlabel (count sprites))
-           (map jscomponent/interpolatingsprite sprites)))
+    (common/time-sexp :rendertime (apply
+                             jscomponent/rapidstage
+                             {:width width :height height :key "stage" :currentTime (om/get-state owner :faketime)}
+                             (pixi/tilingsprite {:image (common/assetpath-for "bg_castle.png") :width width :height height :key "ack"})
+                             (om/build addspritebutton {:addspritechannel (om/get-state owner :addspritechannel)})
+                             (om/build common/controlpanel {:x 10 :y 10 :spritecount (count sprites)})
+                             (map jscomponent/interpolatingsprite sprites))))
   (display-name [_] "ExampleStage3"))
 
 (defn getcomponentandstate []
