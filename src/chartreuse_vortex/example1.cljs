@@ -5,6 +5,7 @@
 ;; afforded by structural sharing of immutable data structures.
 ;;
 (ns chartreuse-vortex.example1
+  (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [chartreuse-vortex.common :as common :include-macros true]
             [goog.events :as events]
             [om.core :as om :include-macros true]
@@ -12,13 +13,17 @@
             [omreactpixi.abbrev :as pixi]
             [schema.core :as schema]
             [clojure.string :as string]
-            [chartreuse-vortex.common :as common :include-macros true]))
+            [chartreuse-vortex.common :as common :include-macros true]
+            [cljs.core.async :as async]))
 
 (defn addsprite [{:keys [sprites] :as appdata}]
   (let [[newx newy] (map rand-int (common/shrinkbyspritesize appdata))
         newsprite {:x newx :y newy :dx 300 :dy 0 :key (count sprites) :image common/*spriteimage*}
         newsprites (conj sprites newsprite)]
     (assoc appdata :sprites newsprites)))
+
+(defn clearsprites [appdata]
+  (assoc appdata :sprites []))
 
 (defonce appstate (atom (addsprite {:width 0
                                     :height 0
@@ -61,14 +66,22 @@
 (defcomponentk examplestage [[:data width height sprites :as cursor] owner]
   ;; set up (and tear down upon unmount) a recurring calback
   ;; that updates sprites every frame
+  (init-state [_] {:spritecontrolchannel (async/chan 1)})
   (did-mount [_]
              (let [updatefn (fn updatecallback [_]
                               (common/time-sexp :updatetime
                                 (om/transact! cursor updateallsprites))
-                              (om/set-state! owner :updatecallback (js/requestAnimationFrame updatecallback)))]
-               (om/set-state! owner :updatecallback (js/requestAnimationFrame updatefn))))
+                              (om/set-state! owner :updatecallback (js/requestAnimationFrame updatecallback)))
+                   spritecontrolchannel (om/get-state :spritecontrolchannel)]
+               (om/set-state! owner :updatecallback (js/requestAnimationFrame updatefn))
+               (go (loop [clickdata (<! spritecontrolchannel)]
+                     (cond
+                       (= clickdata "plus")    (om/transact! cursor addsprite)
+                       (= clickdata "minus")   (om/transact! cursor clearsprites)
+                       :else                   (.warn js/console (str "Illegal data in spritecontrolchannel:" clickdata)))
+                     (recur (<! spritecontrolchannel))))))
   (will-unmount [_]
-                (when-let [updatefn (om/get-state owner :updatecalback)]
+                (when-let [updatefn (om/get-state owner :updatecallback)]
                   (js/cancelAnimationFrame updatefn)))
   (render [_]
     (common/time-sexp :rendertime

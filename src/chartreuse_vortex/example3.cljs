@@ -34,17 +34,21 @@
 (defn addsprite [{:keys [sprites] :as appdata} currenttime]
   {:pre [(number? currenttime)]}
   (let [[newx newy] (map rand-int (common/shrinkbyspritesize appdata))
-        newsprite {:x0 newx
-                   :y0 newy
-                   :dx0 300
-                   :dy0 0
-                   :ddx0 0
-                   :ddy0 common/*gravity*
-                   :t0 currenttime
-                   :key (count sprites)
+        newdx (+ 150 (rand-int 300))
+        newsprite {:x0    newx
+                   :y0    (/ newy 2)
+                   :dx0   newdx
+                   :dy0   0
+                   :ddx0  0
+                   :ddy0  common/*gravity*
+                   :t0    currenttime
+                   :key   (count sprites)
                    :image common/*spriteimage*}
         newsprites (conj sprites newsprite)]
     (assoc appdata :sprites newsprites)))
+
+(defn clearsprites [appdata]
+  (assoc appdata :sprites []))
 
 (defonce appstate (atom {:width 0
                          :height 0
@@ -182,16 +186,10 @@ time 'nexttime'."
   (let [newsprites (vec (map #(maybe-update-sprite % newtime width height) sprites))]
     (assoc appstate :sprites newsprites)))
 
-(defcomponentk addspritebutton [[:data addspritechannel] owner]
-  (display-name [_] "AddSpriteButton")
-  (render [_]
-          (let [clickhandler (fn [] (put! addspritechannel 1))]
-            (pixi/sprite {:x 100 :y 100 :interactive true :image common/*spriteimage* :click clickhandler}))))
-
 (defcomponentk examplestage [[:data width height sprites :as cursor] owner]
   ;; set up (and tear down upon unmount) a recurring calback
   ;; that updates sprites every frame
-  (init-state [_] {:addspritechannel (async/chan)})
+  (init-state [_] {:spritecontrolchannel (async/chan 1)})
   (did-mount [_]
              (let [updatefn (fn updatecallback [newtime]
                               (let [faketime (om/get-state owner :faketime)
@@ -199,13 +197,17 @@ time 'nexttime'."
                                 (common/time-sexp :updatetime (om/transact! cursor (fn [x] (updateallsprites x newfaketime))))
                                 (om/set-state! owner :updatecallback (js/requestAnimationFrame updatecallback))
                                 (om/set-state! owner :faketime newfaketime)))
-                   addspritechannel (om/get-state owner :addspritechannel)]
+                   spritecontrolchannel (om/get-state owner :spritecontrolchannel)
+                   addspritefunc (fn [appdata] (addsprite appdata (om/get-state owner :faketime)))]
                (om/set-state! owner :updatecallback (js/requestAnimationFrame updatefn))
                (om/set-state! owner :faketime 0)
                (om/transact! cursor #(addsprite % 0))
-               (go (loop [addclick (<! addspritechannel)]
-                     (om/transact! cursor #(addsprite % (om/get-state owner :faketime)))
-                     (recur (<! addspritechannel))))))
+               (go (loop [clickdata (<! spritecontrolchannel)]
+                     (cond
+                       (= clickdata "plus")    (om/transact! cursor addspritefunc)
+                       (= clickdata "minus")   (om/transact! cursor clearsprites)
+                       :else                   (.warn js/console (str "Illegal data in spritecontrolchannel:" clickdata)))
+                     (recur (<! spritecontrolchannel))))))
   (will-unmount [_]
                 (when-let [updatefn (om/get-state owner :updatecalback)]
                   (js/cancelAnimationFrame updatefn)))
@@ -214,8 +216,7 @@ time 'nexttime'."
                              jscomponent/rapidstage
                              {:width width :height height :key "stage" :currentTime (om/get-state owner :faketime)}
                              (pixi/tilingsprite {:image (common/assetpath-for "bg_castle.png") :width width :height height :key "ack"})
-                             (om/build addspritebutton {:addspritechannel (om/get-state owner :addspritechannel)})
-                             (om/build common/controlpanel {:x 10 :y 10 :spritecount (count sprites)})
+                             (om/build common/controlpanel {:x 10 :y 10 :sprites sprites :spritecontrolchannel (om/get-state owner :spritecontrolchannel)})
                              (map jscomponent/interpolatingsprite sprites))))
   (display-name [_] "ExampleStage3"))
 
