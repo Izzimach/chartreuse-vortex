@@ -110,7 +110,7 @@ chartreuse_vortex.jsvortex.interpolatingSprite = ReactPIXI.CustomPIXIComponent(
     customDidAttach: function(displayObject) {
       var stageupdatelist = displayObject.stage.perFrameUpdaters;
       var updatefunction = function (time) {
-	displayObject.reinterpolate(time);
+	    displayObject.reinterpolate(time);
       };
       displayObject.userData = updatefunction;
       stageupdatelist.push(updatefunction);
@@ -120,8 +120,82 @@ chartreuse_vortex.jsvortex.interpolatingSprite = ReactPIXI.CustomPIXIComponent(
       var stageupdatelist = displayObject.stage.perFrameUpdaters;
       var funcindex = stageupdatelist.indexOf(displayObject.userData);
       if (funcindex >= 0) {
-	stageupdatelist.splice(funcindex,1);
+	    stageupdatelist.splice(funcindex,1);
       }
+    }
+  }
+);
+
+chartreuse_vortex.jsvortex.userChildDisplayContainer = ReactPIXI.CustomPIXIComponent(
+  {
+    customDisplayObject: function(props) {
+      return new PIXI.DisplayObjectContainer();
+    },
+    customApplyProps: function(displayObject, oldProps, newProps) {
+    },
+
+    // Cheesy override of _updateChildren.
+    // Don't try this at home
+    updateCustomChildren: function(oldChildren, nextChildren, customUpdater, transaction, context) {
+      if (typeof oldChildren === 'undefined') {
+        oldChildren = [];
+      }
+      if (typeof nextChildren === 'undefined') {
+        nextChildren = [];
+      }
+      //console.log("custom update children called");
+      var prevChildren = this._renderedChildren;
+
+      // the updater takes old and new 'children' and returns an iterator that
+      // produces a sequence of modifications to children.
+      var updaterInstance = customUpdater(oldChildren, nextChildren);
+
+      var itervalue = updaterInstance.next();
+      while (!itervalue.done) {
+        console.log(itervalue.value);
+        itervalue = updaterInstance.next();
+      }
+    },
+
+    mountComponent: function(rootID, transaction, context) {
+
+      var props = this._currentElement.props;
+      if (typeof this.customDisplayObject !== "object") {
+        console.warn("No customDisplayObject method found for a CustomPIXIComponent");
+      }
+      this._displayObject = this.customDisplayObject(props);
+
+      this.applyDisplayObjectProps({}, props);
+      if (this.customApplyProps) {
+        this.customApplyProps(this._displayObject, {}, props);
+      }
+
+      this.updateCustomChildren([], props.customChildren, props.customUpdater, transaction, context);
+
+      return this._displayObject;
+    },
+
+    receiveComponent: function(nextElement, transaction, context) {
+      var newProps = nextElement.props;
+      var oldProps = this._currentElement.props;
+
+      if (this.customApplyProps) {
+        this.customApplyProps(this._displayObject, oldProps, newProps);
+      }
+      else {
+        this.applyDisplayObjectProps(oldProps, newProps);
+      }
+
+      this.updateCustomChildren(oldProps.customChildren, newProps.customChildren, newProps.customUpdater, transaction, context);
+      this._currentElement = nextElement;
+    },
+
+    // customDidAttach and customWillDetach are invoked by DisplayObjectContainerMixin,
+    // which is where the attach/detach actually occurs
+
+    unmountComponent: function() {
+      var oldProps = this._currentElement.props;
+      this.updateCustomChildren(oldProps.customChildren, [], newProps.customUpdater, transaction, context);
     }
   }
 );

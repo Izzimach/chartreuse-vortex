@@ -172,8 +172,7 @@ data blob that represents the sprite after its next event (collision) occurs."
   {:pre [(number? nexttime)
          (number? width)
          (number? height)]}
-  "Possibly updates the sprite data to make sure it is valid at the
-time 'nexttime'."
+  "Possibly updates the sprite data to make sure it is valid at the time 'nexttime'."
   ;; if the sprite data doesn't contain the next sprite state, add it
   (let [fullspritedata (attach-next-event spritedata width height)
         nextstate (:nextstate fullspritedata)
@@ -217,6 +216,11 @@ time 'nexttime'."
                              {:width width :height height :key "stage" :currentTime (om/get-state owner :faketime)}
                              (pixi/tilingsprite {:image (common/assetpath-for "bg_castle.png") :width width :height height :key "ack"})
                              (om/build common/controlpanel {:x 10 :y 10 :sprites sprites :spritecontrolchannel (om/get-state owner :spritecontrolchannel)})
+                             ;;
+                             ;; we use the #js form in the next sexp to prevent auto-conversion of clojurescript data structures into javascript objects;
+                             ;; in particular, we want 'sprites' to get passed in as a "raw" clojurescript data structure without getting converted
+                             ;;
+                             (jscomponent/userchilddisplaycontainer #js {:customUpdater jscomponent/build-customchildren-iterator :customChildren sprites})
                              (map jscomponent/interpolatingsprite sprites))))
   (display-name [_] "ExampleStage3"))
 
