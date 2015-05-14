@@ -194,7 +194,7 @@ data blob that represents the sprite after its next event (collision) occurs."
              (let [updatefn (fn updatecallback [newtime]
                               (let [faketime (om/get-state owner :faketime)
                                     newfaketime (+ faketime 0.016)]
-                                (common/time-sexp :updatetime (om/transact! cursor (fn [x] (updateallsprites x newfaketime))))
+                                (om/transact! cursor (fn [x] (common/time-sexp :updatetime (updateallsprites x newfaketime))))
                                 (om/set-state! owner :updatecallback (js/requestAnimationFrame updatecallback))
                                 (om/set-state! owner :faketime newfaketime)))
                    spritecontrolchannel (om/get-state owner :spritecontrolchannel)
@@ -221,7 +221,7 @@ data blob that represents the sprite after its next event (collision) occurs."
                              ;; we use the #js form in the next sexp to prevent auto-conversion of clojurescript data structures into javascript objects;
                              ;; in particular, we want 'sprites' to get passed in as a "raw" clojurescript data structure without getting converted
                              ;;
-                             (jscomponent/userchilddisplaycontainer #js {:customUpdater jscomponent/build-customchildren-iterator :customChildren sprites :customComponent jsvortex/interpolatingSprite})
+                             (jscomponent/userchilddisplaycontainer #js {:customUpdater jscomponent/build-customchildren-iterator :customChildren @sprites :customComponent jsvortex/interpolatingSprite})
                              ;;(map jscomponent/interpolatingsprite sprites)
                              )))
   (display-name [_] "ExampleStage3"))

@@ -6,6 +6,11 @@ goog.require('goog.object');
 //
 
 //
+// If object properties are access using bracket syntax (a['ack'] instead of a.ack)
+// it's probably to prevent the google closure compiler from renaming/minimizing them
+//
+
+//
 // rapidStage is a Stage-like component that will call update()
 // on sub-components every frame. It adds in a prop 'perFrameUpdaters'
 // that is basically an array of update functions to call every frame.
@@ -65,23 +70,23 @@ chartreuse_vortex.jsvortex.rapidStage = React.createClass({
 var VortexSprite = function(texture) {
   PIXI.Sprite.call(this, texture);
 
-  this.t0 = 0;
-  this.x0 = 0;
-  this.y0 = 0;
-  this.dx0 = 0;
-  this.dy0 = 0;
-  this.ddx0 = 0;
-  this.ddy0 = 0;
-  this.attime = 0;
-  this.userData = null;
+  this['t0'] = 0;
+  this['x0'] = 0;
+  this['y0'] = 0;
+  this['dx0'] = 0;
+  this['dy0'] = 0;
+  this['ddx0'] = 0;
+  this['ddy0'] = 0;
+  this['attime'] = 0;
+  this['userData'] = null;
 };
 VortexSprite.prototype = Object.create(PIXI.Sprite.prototype);
 VortexSprite.prototype.constructor = VortexSprite;
 VortexSprite.prototype.reinterpolate = function(attime) {
-  var dt = attime - this.t0;
-  this.attime = attime;
-  this.x = this.x0 + this.dx0 * dt + 0.5 * this.ddx0 * dt * dt;
-  this.y = this.y0 + this.dy0 * dt + 0.5 * this.ddy0 * dt * dt;
+  var dt = attime - this['t0'];
+  this['attime'] = attime;
+  this['x'] = this['x0'] + this['dx0'] * dt + 0.5 * this['ddx0'] * dt * dt;
+  this['y'] = this['y0'] + this['dy0'] * dt + 0.5 * this['ddy0'] * dt * dt;
 }
 
 chartreuse_vortex.jsvortex.interpolatingSprite = ReactPIXI.CustomPIXIComponent(
@@ -92,16 +97,16 @@ chartreuse_vortex.jsvortex.interpolatingSprite = ReactPIXI.CustomPIXIComponent(
     },
 
     customApplyProps: function(displayObject, oldProps, newProps) {
-      this.applyDisplayObjectProps(oldProps, newProps);
+      //this.applyDisplayObjectProps(oldProps, newProps);
       // set the current interpolating values
-      displayObject.t0 = newProps.t0;
-      displayObject.x0 = newProps.x0;
-      displayObject.y0 = newProps.y0;
-      displayObject.dx0 = newProps.dx0;
-      displayObject.dy0 = newProps.dy0;
-      displayObject.ddx0 = newProps.ddx0;
-      displayObject.ddy0 = newProps.ddy0;
-      displayObject.reinterpolate(displayObject.attime);
+      displayObject['t0'] = newProps['t0'];
+      displayObject['x0'] = newProps['x0'];
+      displayObject['y0'] = newProps['y0'];
+      displayObject['dx0'] = newProps['dx0'];
+      displayObject['dy0'] = newProps['dy0'];
+      displayObject['ddx0'] = newProps['ddx0'];
+      displayObject['ddy0'] = newProps['ddy0'];
+      displayObject.reinterpolate(displayObject['attime']);
     },
 
     // add/remove this sprite to the list of items to update
@@ -131,7 +136,7 @@ chartreuse_vortex.jsvortex.userChildDisplayContainer = React.createClass(
     displayName: "userChildDisplayContainer",
 
     getInitialState: function() {
-      return { currentChildren: [] }
+      return { 'currentChildren': [] }
     },
 
     propTypes: {
@@ -145,11 +150,13 @@ chartreuse_vortex.jsvortex.userChildDisplayContainer = React.createClass(
     },
 
     componentWillMount: function() {
-      this.updateCustomChildren([], this.props.customChildren, this.props.customUpdater, this.props.customComponent);
+      // props variables are accessed via bracket notation to prevent google closure from renaming them
+      this.updateCustomChildren([], this.props['customChildren'], this.props['customUpdater'], this.props['customComponent']);
     },
 
     componentWillReceiveProps: function(nextProps) {
-      this.updateCustomChildren(this.props.customChildren, nextProps.customChildren, nextProps.customUpdater, this.props.customComponent);
+      // props variables are accessed via bracket notation to prevent google closure from renaming them
+      this.updateCustomChildren(this.props['customChildren'], nextProps['customChildren'], nextProps['customUpdater'], this.props['customComponent']);
     },
 
     updateCustomChildren: function(oldChildren, nextChildren, customUpdater, customComponent) {
@@ -164,21 +171,21 @@ chartreuse_vortex.jsvortex.userChildDisplayContainer = React.createClass(
       // the updater takes old and new 'children' and returns an iterator that
       // produces a sequence of modifications to children.
       var updaterInstance = customUpdater(oldChildren, nextChildren);
-      var currentChildren = this.state.currentChildren;
+      var currentChildren = this.state['currentChildren'];
 
       var iterelement = updaterInstance.next();
       var itervalue = iterelement.value;
       while (!iterelement.done) {
         //console.log(itervalue);
-        if  (itervalue.op ==="update") {
+        if  (itervalue['op'] === "update") {
           currentChildren[itervalue.index] = React.createElement(customComponent, itervalue.data);
-        } else if (itervalue.op === "append") {
+        } else if (itervalue['op'] === "append") {
           // this should be at the end
           if (itervalue.index !== currentChildren.length) {
             console.log("Error: custom updater append should add elements at the end of the array");
           }
           currentChildren.push(React.createElement(customComponent, itervalue.data));
-        } else if (itervalue.op === "remove") {
+        } else if (itervalue['op'] === "remove") {
           if (itervalue.index >= currentChildren.length) {
             console.log("Error: tried to remove element past the end of the array");
           }
@@ -189,11 +196,11 @@ chartreuse_vortex.jsvortex.userChildDisplayContainer = React.createClass(
         itervalue = iterelement.value;
       }
 
-      this.setState({currentChildren: currentChildren});
+      this.setState({'currentChildren': currentChildren});
     },
 
     render: function() {
-      return React.createElement(ReactPIXI.DisplayObjectContainer, {}, this.state.currentChildren);
+      return React.createElement(ReactPIXI.DisplayObjectContainer, {}, this.state['currentChildren']);
     }
   }
 );

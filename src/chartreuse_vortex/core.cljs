@@ -10,7 +10,6 @@
 
 (enable-console-print!)
 
-
 ;; gotta load the bitmap font(s) first or else pixi bombs out
 (defonce needtopreload (atom true))
 
