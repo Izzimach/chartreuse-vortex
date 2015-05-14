@@ -7,7 +7,7 @@
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [org.clojure/clojurescript "0.0-3165"]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
-                 [org.clojars.haussman/om-react-pixi "0.5.0"]
+                 [org.clojars.haussman/om-react-pixi "0.5.1"]
                  [prismatic/schema "0.4.2"]
                  [prismatic/om-tools "0.3.11"]
                  [ring "1.3.2"]
