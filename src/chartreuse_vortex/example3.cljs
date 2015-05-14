@@ -23,7 +23,8 @@
             [clojure.string :as string]
             [cljs.core.async :as async :refer [>! <! put!]]
             ;; this directly imports js code from the :libs path...
-            [chartreuse-vortex.jscomponent :as jscomponent :include-macros true]))
+            [chartreuse-vortex.jscomponent :as jscomponent :include-macros true]
+            [chartreuse-vortex.jsvortex :as jsvortex]))
 
 (defonce *maxtimestep* 10)
 
@@ -211,7 +212,7 @@ data blob that represents the sprite after its next event (collision) occurs."
                 (when-let [updatefn (om/get-state owner :updatecalback)]
                   (js/cancelAnimationFrame updatefn)))
   (render [_]
-    (common/time-sexp :rendertime (apply
+    (common/time-sexp :rendertime (
                              jscomponent/rapidstage
                              {:width width :height height :key "stage" :currentTime (om/get-state owner :faketime)}
                              (pixi/tilingsprite {:image (common/assetpath-for "bg_castle.png") :width width :height height :key "ack"})
@@ -220,8 +221,9 @@ data blob that represents the sprite after its next event (collision) occurs."
                              ;; we use the #js form in the next sexp to prevent auto-conversion of clojurescript data structures into javascript objects;
                              ;; in particular, we want 'sprites' to get passed in as a "raw" clojurescript data structure without getting converted
                              ;;
-                             (jscomponent/userchilddisplaycontainer #js {:customUpdater jscomponent/build-customchildren-iterator :customChildren sprites})
-                             (map jscomponent/interpolatingsprite sprites))))
+                             (jscomponent/userchilddisplaycontainer #js {:customUpdater jscomponent/build-customchildren-iterator :customChildren sprites :customComponent jsvortex/interpolatingSprite})
+                             ;;(map jscomponent/interpolatingsprite sprites)
+                             )))
   (display-name [_] "ExampleStage3"))
 
 (defn getcomponentandstate []

@@ -15,26 +15,35 @@
   ;;
   ;; this is basically a javascript iterator
   ;;
-  (let [iterobject (js-obj "oldseq" (seq oldchildren) "newseq" (seq newchildren))
+  (let [iterobject (js-obj "oldseq" (seq oldchildren) "newseq" (seq newchildren) "iterindex" 0)
         nextfunc (fn []
                    (let [oldseq (aget iterobject "oldseq")
                          oldelement (first oldseq)
-                         oldrest (rest oldseq)
+                         oldrest (next oldseq)
                          newseq (aget iterobject "newseq")
                          newelement (first newseq)
-                         newrest (rest newseq)
+                         newrest (next newseq)
+                         currentindex (aget iterobject "iterindex")
+                         nextindex (inc currentindex)
+                         op (cond
+                              (= nil oldelement newelement) "done"
+                              (= nil oldelement)            "append"
+                              (= nil newelement)            "remove"
+                              (= oldelement newelement)     "noop"
+                              :else                         "update")
+                         opdata (if (or (= op "noop") (= op "done"))
+                                  nil
+                                  (clj->js newelement))
                          ]
                      (aset iterobject "oldseq" oldrest)
                      (aset iterobject "newseq" newrest)
-                     #_(if (not= nil oldelement newelement)
-                       (.log js/console (clj->js oldelement) (clj->js newelement) (= oldelement newelement))
-                       )
-                     (cond
-                       (= nil oldelement newelement) #js {:done true :value nil}
-                       (= nil oldelement) #js {:done false :value "append"}
-                       (= nil newelement) #js {:done false :value "remove"}
-                       (= oldelement newelement) #js {:done false :value "noop"}
-                       :else #js{:done false :value "update"})))]
+                     ;; deleting  at the end basically consists of repeatedly 'remove'-ing
+                     ;; at the same index over and over, so don't advance the index when removing
+                     (if (not= op "remove")
+                       (aset iterobject "iterindex" nextindex))
+                     (if (= op "done")
+                       #js {:done true :value nil}
+                       #js {:done false :value #js {:op op :index currentindex :data opdata}})))]
     (aset iterobject "next" nextfunc)
     iterobject)
   )

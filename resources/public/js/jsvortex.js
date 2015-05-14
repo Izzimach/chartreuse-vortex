@@ -126,17 +126,33 @@ chartreuse_vortex.jsvortex.interpolatingSprite = ReactPIXI.CustomPIXIComponent(
   }
 );
 
-chartreuse_vortex.jsvortex.userChildDisplayContainer = ReactPIXI.CustomPIXIComponent(
+chartreuse_vortex.jsvortex.userChildDisplayContainer = React.createClass(
   {
-    customDisplayObject: function(props) {
-      return new PIXI.DisplayObjectContainer();
-    },
-    customApplyProps: function(displayObject, oldProps, newProps) {
+    displayName: "userChildDisplayContainer",
+
+    getInitialState: function() {
+      return { currentChildren: [] }
     },
 
-    // Cheesy override of _updateChildren.
-    // Don't try this at home
-    updateCustomChildren: function(oldChildren, nextChildren, customUpdater, transaction, context) {
+    propTypes: {
+      // this is called with old/new values of customChildren and should generate
+      // an iterator that can be used to get a sequence of patch operations
+      customUpdater: React.PropTypes.func.isRequired,
+      // some opaque data type that gets passed into customUpdater
+      customChildren: React.PropTypes.object.isRequired,
+      // the component used to create or update react elements
+      customComponent: React.PropTypes.func.isRequired
+    },
+
+    componentWillMount: function() {
+      this.updateCustomChildren([], this.props.customChildren, this.props.customUpdater, this.props.customComponent);
+    },
+
+    componentWillReceiveProps: function(nextProps) {
+      this.updateCustomChildren(this.props.customChildren, nextProps.customChildren, nextProps.customUpdater, this.props.customComponent);
+    },
+
+    updateCustomChildren: function(oldChildren, nextChildren, customUpdater, customComponent) {
       if (typeof oldChildren === 'undefined') {
         oldChildren = [];
       }
@@ -144,58 +160,40 @@ chartreuse_vortex.jsvortex.userChildDisplayContainer = ReactPIXI.CustomPIXICompo
         nextChildren = [];
       }
       //console.log("custom update children called");
-      var prevChildren = this._renderedChildren;
 
       // the updater takes old and new 'children' and returns an iterator that
       // produces a sequence of modifications to children.
       var updaterInstance = customUpdater(oldChildren, nextChildren);
+      var currentChildren = this.state.currentChildren;
 
-      var itervalue = updaterInstance.next();
-      while (!itervalue.done) {
-        console.log(itervalue.value);
-        itervalue = updaterInstance.next();
+      var iterelement = updaterInstance.next();
+      var itervalue = iterelement.value;
+      while (!iterelement.done) {
+        //console.log(itervalue);
+        if  (itervalue.op ==="update") {
+          currentChildren[itervalue.index] = React.createElement(customComponent, itervalue.data);
+        } else if (itervalue.op === "append") {
+          // this should be at the end
+          if (itervalue.index !== currentChildren.length) {
+            console.log("Error: custom updater append should add elements at the end of the array");
+          }
+          currentChildren.push(React.createElement(customComponent, itervalue.data));
+        } else if (itervalue.op === "remove") {
+          if (itervalue.index >= currentChildren.length) {
+            console.log("Error: tried to remove element past the end of the array");
+          }
+          currentChildren.splice(itervalue.index,1);
+        } // else "noop"
+
+        iterelement = updaterInstance.next();
+        itervalue = iterelement.value;
       }
+
+      this.setState({currentChildren: currentChildren});
     },
 
-    mountComponent: function(rootID, transaction, context) {
-
-      var props = this._currentElement.props;
-      if (typeof this.customDisplayObject !== "object") {
-        console.warn("No customDisplayObject method found for a CustomPIXIComponent");
-      }
-      this._displayObject = this.customDisplayObject(props);
-
-      this.applyDisplayObjectProps({}, props);
-      if (this.customApplyProps) {
-        this.customApplyProps(this._displayObject, {}, props);
-      }
-
-      this.updateCustomChildren([], props.customChildren, props.customUpdater, transaction, context);
-
-      return this._displayObject;
-    },
-
-    receiveComponent: function(nextElement, transaction, context) {
-      var newProps = nextElement.props;
-      var oldProps = this._currentElement.props;
-
-      if (this.customApplyProps) {
-        this.customApplyProps(this._displayObject, oldProps, newProps);
-      }
-      else {
-        this.applyDisplayObjectProps(oldProps, newProps);
-      }
-
-      this.updateCustomChildren(oldProps.customChildren, newProps.customChildren, newProps.customUpdater, transaction, context);
-      this._currentElement = nextElement;
-    },
-
-    // customDidAttach and customWillDetach are invoked by DisplayObjectContainerMixin,
-    // which is where the attach/detach actually occurs
-
-    unmountComponent: function() {
-      var oldProps = this._currentElement.props;
-      this.updateCustomChildren(oldProps.customChildren, [], newProps.customUpdater, transaction, context);
+    render: function() {
+      return React.createElement(ReactPIXI.DisplayObjectContainer, {}, this.state.currentChildren);
     }
   }
 );
